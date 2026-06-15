@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import "./App.css";
 
-const API_KEY = "c72aff27bf6996cb9444fd335d20d27b";
-const BASE_URL = "https://gnews.io/api/v4";
+const BASE_URL = "/api/news";
 
 const CATEGORIES = [
   { id: "india",         label: "🇮🇳 India"         },
@@ -36,13 +35,13 @@ export default function App() {
       let url;
 
       if (searchQuery) {
-        url = `${BASE_URL}/search?q=${encodeURIComponent(searchQuery)}&lang=en&max=18&apikey=${API_KEY}`;
+        url = `${BASE_URL}?type=search&query=${encodeURIComponent(searchQuery)}`;
       } else if (activeCategory.id === "india") {
-        url = `${BASE_URL}/search?q=india&lang=en&country=in&max=18&apikey=${API_KEY}`;
+        url = `${BASE_URL}?type=india`;
       } else if (activeCategory.id === "world") {
-        url = `${BASE_URL}/top-headlines?lang=en&max=18&apikey=${API_KEY}`;
+        url = `${BASE_URL}?type=world`;
       } else {
-        url = `${BASE_URL}/top-headlines?category=${activeCategory.id}&lang=en&max=18&apikey=${API_KEY}`;
+        url = `${BASE_URL}?type=category&category=${activeCategory.id}`;
       }
 
       const res  = await fetch(url);
