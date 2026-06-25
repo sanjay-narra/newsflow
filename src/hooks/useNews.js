@@ -1,12 +1,29 @@
 import { useState, useEffect, useCallback } from "react";
 
-const API_KEY = process.env.REACT_APP_NEWS_API_KEY;
-const BASE_URL = "https://gnews.io/api/v4";
+const BASE_URL = "/api/news";
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1500;
 
 function useNews(activeCategory, searchQuery) {
   const [articles, setArticles] = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchWithRetry = async (url, retries = MAX_RETRIES) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+      if (data.errors) throw new Error(data.errors[0] || "Failed to fetch news");
+      return data;
+    } catch (err) {
+      if (retries > 0) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+        return fetchWithRetry(url, retries - 1);
+      }
+      throw err;
+    }
+  };
 
   const fetchNews = useCallback(async () => {
     setLoading(true);
@@ -15,20 +32,16 @@ function useNews(activeCategory, searchQuery) {
       let url;
 
       if (searchQuery) {
-        url = `${BASE_URL}/search?q=${encodeURIComponent(searchQuery)}&lang=en&max=18&apikey=${API_KEY}`;
+        url = `${BASE_URL}?type=search&query=${encodeURIComponent(searchQuery)}`;
       } else if (activeCategory.id === "india") {
-        url = `${BASE_URL}/search?q=india&lang=en&country=in&max=18&apikey=${API_KEY}`;
+        url = `${BASE_URL}?type=india`;
       } else if (activeCategory.id === "world") {
-        url = `${BASE_URL}/top-headlines?lang=en&max=18&apikey=${API_KEY}`;
+        url = `${BASE_URL}?type=world`;
       } else {
-        url = `${BASE_URL}/top-headlines?category=${activeCategory.id}&lang=en&max=18&apikey=${API_KEY}`;
+        url = `${BASE_URL}?type=category&category=${activeCategory.id}`;
       }
 
-      const res  = await fetch(url);
-      const data = await res.json();
-
-      if (data.errors) throw new Error(data.errors[0] || "Failed to fetch news");
-
+      const data = await fetchWithRetry(url);
       const valid = (data.articles || []).filter((a) => a.title && a.image);
       setArticles(valid);
     } catch (err) {
